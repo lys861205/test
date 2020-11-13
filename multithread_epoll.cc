@@ -51,7 +51,7 @@ protected:
 class Server2 : public Thread {
 public:
 
-  Server2(short port):_epollfd(::epoll_create(256)),
+  Server2(short port):_epollfd(::epoll_create1(EPOLL_CLOEXEC)),
                       _port(port) {
       assert(_epollfd != -1);
   }
@@ -62,7 +62,7 @@ public:
   }
 
   int create_fd_and_listen() {
-    _fd = socket(AF_INET, SOCK_STREAM, 0);
+    _fd = socket(AF_INET, SOCK_STREAM|SOCK_NONBLOCK|SOCK_CLOEXEC, 0);
     if (_fd < 0) {
       return -1;
     }
