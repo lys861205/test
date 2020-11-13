@@ -11,7 +11,7 @@
 * 协成
 * execve
 * sendfile
-* epoll for mutithread
+* listenfd for mutithread
     * SO_REUSEADDR
     * SO_REUSEPORT
 
