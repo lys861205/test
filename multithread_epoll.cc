@@ -41,7 +41,6 @@ public:
     _thread->join();
   }
 
-
   virtual void Serve() {};
 
 protected:
@@ -88,10 +87,19 @@ public:
     if (::listen(_fd, 128)) {
       return -1;
     }
+
+{
+    struct sockaddr_in addr;
+    socklen_t addr_len;
+    if (::getsockname(_fd, (sockaddr*)&addr, &addr_len) < 0) {
+      return -1;
+    }
+    printf("local: %s:%d\n",inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
+}
     return 0;
   }
 
-  int add_fd_epoll(int fd) {
+  inline int add_fd_epoll(int fd) {
     struct epoll_event event; 
     event.data.fd = fd;
     event.events = EPOLLIN | EPOLLERR | EPOLLHUP;
@@ -99,7 +107,7 @@ public:
   }
 
 
-  int del_fd_epoll(int fd) {
+  inline int del_fd_epoll(int fd) {
     struct epoll_event event; 
     event.data.fd = fd;
     event.events = EPOLLIN | EPOLLERR | EPOLLHUP;
@@ -133,7 +141,11 @@ public:
         if (ready_event[i].data.fd == _fd) {
           struct sockaddr_in addr;
           socklen_t addr_len;
+#if 1
+          int connfd = ::accept4(_fd, (struct sockaddr*)&addr, &addr_len, SOCK_NONBLOCK|SOCK_CLOEXEC);
+#else
           int connfd = ::accept(_fd, (struct sockaddr*)&addr, &addr_len);
+#endif
           if (connfd < 0) {
             printf("accept error: %d\n", errno); 
             continue;
@@ -161,18 +173,17 @@ public:
 private:
   int _fd;
   int _epollfd;
-  std::string _ip;
   short _port;
 };
 
 int main()
 {
   std::vector<std::unique_ptr<Server2>> services;
-  for (int i = 0; i < 10; ++i) {
+  for (int i = 0; i < 5; ++i) {
     services.emplace_back(new Server2(8282));
     services.back()->Start();
   }
-  for (int i = 0; i < 10; ++i) {
+  for (int i = 0; i < 5; ++i) {
     services[i]->Wait();
   }
   return 0;
