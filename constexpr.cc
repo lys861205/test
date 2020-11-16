@@ -19,6 +19,6 @@ int main()
 {
   const int X = 2; 
   list<sqr1(X)> list1; // OK
-  list<sqr2(X)> list2; // ERROR
+  //list<sqr2(X)> list2; // ERROR
   return 0;
 }

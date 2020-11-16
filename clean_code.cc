@@ -1,3 +1,7 @@
+#include <string>
+
+using namespace std;
+
 class GuessStatisticsMessage 
 {
 private:
@@ -8,7 +12,16 @@ public:
   string Make(char candidate, int count)
   {
     createPluralDependentMessageParts(count);
-    return string.format("There %s %s %s%s", verb, number, candidate, pluralModifier);
+    char buf[128] = {0};
+    snprintf(buf, sizeof buf, "There %s %s %c%s", verb.c_str(), number.c_str(), candidate, pluralModifier.c_str());
+    return std::move(string(buf));
+  }
+
+  void thereAreNoLetters() {
+  }
+  void thereIsOneLetter() {
+  }
+  void thereAreManyLetters(int count) {
   }
 
   void createPluralDependentMessageParts(int count)
@@ -22,3 +35,8 @@ public:
     }
   }
 };
+
+int main()
+{
+  return 0;
+}

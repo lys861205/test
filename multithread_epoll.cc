@@ -29,7 +29,6 @@ public:
   void Start() {
     _running = true;
     _thread.reset(new std::thread(std::bind(&Thread::Serve, this)));
-
   }
 
   void Wait() {

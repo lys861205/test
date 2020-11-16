@@ -1,5 +1,5 @@
 #include "timeWheel.hpp"
-#include <windows.h>
+#include <unistd.h>
 
 int main()
 {
@@ -35,7 +35,7 @@ int main()
 	  pTimer2->data = 23;
 	}
 	printf(".");
-	Sleep(1000);
+	sleep(1);
 	tWheel.tick();
   }
   return 0;
