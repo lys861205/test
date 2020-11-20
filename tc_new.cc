@@ -5,6 +5,8 @@
 
 const int N = 10;
 
+#define offsetof(s, m) (size_t)((char*)(&((s*)0)->m))
+
 class Rep
 {
   char cc;
@@ -15,6 +17,28 @@ class Rep
   void set_f( float _f ) { std::cout << "set f val : " << _f << std::endl; f = _f; }
   void get_f() { std::cout << "get f val : " << f << std::endl; }
 };
+
+struct M_st {
+  int ref;
+  int value;
+  char ptr[0];
+};
+
+void* Malloc(int size) 
+{
+  M_st* pM = (M_st*)malloc(sizeof(M_st) + size);
+  pM->ref = 1;
+  pM->value = 1;
+  printf("malloc: %p %p\n", pM, pM->ptr);
+  return pM->ptr;
+}
+
+void Free(void* ptr) 
+{
+  M_st* pM = (M_st*)((char*)(ptr) - offsetof(M_st, ptr));
+  
+  printf("free %p value: %d ref: %d ptr: %d\n", pM, pM->value, pM->ref, *(int*)pM->ptr);
+}
 
 int main()
 {
@@ -31,7 +55,10 @@ int main()
   pfoo->set_f(1.0f);
   pfoo->get_f();
 
-
+  printf("-------------------------\n");
+  int* p = (int*)Malloc(4);
+  *p = 40;
+  Free((void*)p);
   /*
   void* __p = malloc(100);
   int* pi = new (__p) int;
