@@ -15,6 +15,7 @@
     * SO_REUSEADDR
     * SO_REUSEPORT
 * eventfd
+* open(O_DIRECT)
 
 
 
