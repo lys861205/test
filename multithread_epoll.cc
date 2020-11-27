@@ -17,11 +17,11 @@
 #include <assert.h>
 #include <sys/wait.h>
 #include <string>
-
+#include <sched.h>
 
 class Thread {
 public:
-  Thread():_running(false) {
+  Thread(int no):_running(false), _no(no) {
   }
   virtual ~Thread() {
   }
@@ -40,9 +40,20 @@ public:
     _thread->join();
   }
 
+  int SetAffinity() {
+     cpu_set_t mask;
+     CPU_ZERO(&mask);  
+     CPU_SET(_no,&mask);
+    if (sched_setaffinity(0, sizeof(mask), &mask) == -1) {
+      printf("sched_setaffinitya failed.\n");
+    }
+    return 0;
+  }
+
   virtual void Serve() {};
 
 protected:
+  int _no;
   int _running;
   std::unique_ptr<std::thread> _thread;
 };
@@ -50,8 +61,8 @@ protected:
 class Server2 : public Thread {
 public:
 
-  Server2(short port):_epollfd(::epoll_create1(EPOLL_CLOEXEC)),
-                      _port(port) {
+  Server2(short port, int no):_epollfd(::epoll_create1(EPOLL_CLOEXEC)),
+                      _port(port), Thread(no) {
       assert(_epollfd != -1);
   }
 
@@ -83,7 +94,7 @@ public:
     if (::bind(_fd, (const struct sockaddr*)&addr, sizeof(addr)) < 0) {
       return -1;
     }
-    if (::listen(_fd, 128)) {
+    if (::listen(_fd, 1024)) {
       return -1;
     }
 
@@ -114,6 +125,8 @@ public:
   }
 
   virtual void Serve() {
+
+    //SetAffinity();
 
     if (create_fd_and_listen() < 0) {
 
@@ -178,11 +191,11 @@ private:
 int main()
 {
   std::vector<std::unique_ptr<Server2>> services;
-  for (int i = 0; i < 5; ++i) {
-    services.emplace_back(new Server2(8282));
+  for (int i = 0; i < 128; ++i) {
+    services.emplace_back(new Server2(8282, i));
     services.back()->Start();
   }
-  for (int i = 0; i < 5; ++i) {
+  for (int i = 0; i < 128; ++i) {
     services[i]->Wait();
   }
   return 0;
