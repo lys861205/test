@@ -192,11 +192,11 @@ private:
 int main()
 {
   std::vector<std::unique_ptr<Server2>> services;
-  for (int i = 0; i < 1; ++i) {
+  for (int i = 0; i < 64; ++i) {
     services.emplace_back(new Server2(8282, i));
     services.back()->Start();
   }
-  for (int i = 0; i < 1; ++i) {
+  for (int i = 0; i < 64; ++i) {
     services[i]->Wait();
   }
   return 0;
