@@ -154,7 +154,6 @@ public:
           struct sockaddr_in addr;
           socklen_t addr_len;
 #if 1
-          getchar();
           int connfd = ::accept4(_fd, (struct sockaddr*)&addr, &addr_len, SOCK_NONBLOCK|SOCK_CLOEXEC);
 #else
           int connfd = ::accept(_fd, (struct sockaddr*)&addr, &addr_len);
@@ -192,11 +191,11 @@ private:
 int main()
 {
   std::vector<std::unique_ptr<Server2>> services;
-  for (int i = 0; i < 128; ++i) {
+  for (int i = 0; i < 1; ++i) {
     services.emplace_back(new Server2(8282, i));
     services.back()->Start();
   }
-  for (int i = 0; i < 128; ++i) {
+  for (int i = 0; i < 1; ++i) {
     services[i]->Wait();
   }
   return 0;
