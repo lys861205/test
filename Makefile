@@ -1,5 +1,7 @@
 CXX=g++
+CX=gcc
 CXXFLAGS=-g -std=c++11
+CXFLAGS=-g
 LDFLAGS=-lpthread -lmpi
 
 CC_SRCS=$(wildcard *.cc)
@@ -15,7 +17,7 @@ $(CC_BINS):%:%.cc
 	@echo -e "\033[32mCXX\033[0m" $@
 
 $(C_BINS):%:%.c
-	@$(CXX) $< $(CXXFLAGS) -o $@ $(LDFLAGS)
+	@$(CX) $< $(CXFLAGS) -o $@ $(LDFLAGS)
 	@echo -e "\033[32mCXX\033[0m" $@
 
 clean:

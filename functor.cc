@@ -22,24 +22,28 @@ public:
 
 int main()
 {
-  std::vector<Functor> Functors;
-  for ( int i=0; i < 4; i++ )
-  {
-    Functors.emplace_back(std::bind(&print, std::placeholders::_1));
-  }
-
-  for ( int i=0; i < 4; i++ )
-  {
-    Functors.emplace_back(std::bind(&print, i));
-  }
-
+  // std::vector<Functor> Functors;
+  // for ( int i=0; i < 4; i++ )
+  // {
+  //   Functors.emplace_back(std::bind(&print, std::placeholders::_1));
+  // }
+  //
+  // for ( int i=0; i < 4; i++ )
+  // {
+  //   Functors.emplace_back(std::bind(&print, i));
+  // }
+  //
+  //
   Test t;
-  Functors.emplace_back(std::bind(&Test::print, &t));
+  // Functors.emplace_back(std::bind(&Test::print, &t));
 
-  for ( size_t i=0; i < Functors.size(); i++ )
-  {
-    Functor& f = Functors[i];
-    f(2);
-  }
+  Functor f = std::bind(&Test::print, &t);
+  f(2);
+
+  // for ( size_t i=0; i < Functors.size(); i++ )
+  // {
+  //   Functor& f = Functors[i];
+  //   f(2);
+  // }
   return 0;
 }

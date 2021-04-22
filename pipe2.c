@@ -13,7 +13,7 @@ void* thread_fun(void* arg)
   char buffer[128];
   int size;
   int tid;
-  tid = static_cast<pid_t>(::syscall(SYS_gettid));
+  tid = syscall(SYS_gettid);
   size = snprintf(buffer, sizeof buffer, "I'am thread of %lu.\n", tid);
   fd = (int*)arg;
   printf("write text: %s", buffer);

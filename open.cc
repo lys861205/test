@@ -15,8 +15,8 @@ void test_open_direct() {
     perror("posix_memalign failed");
     exit(1);
   }
-  int fd = open("w2v_buf.bin", O_DIRECT | O_RDONLY);
-  //int fd = open("w2v_buf.bin", O_RDONLY);
+  //int fd = open("w2v_buf.bin", O_DIRECT | O_RDONLY);
+  int fd = open("w2v_buf.bin", O_RDONLY);
   while (1) {
     ssize_t n = read(fd, (void*)buf, 10240);
     if (n <= 0) {
