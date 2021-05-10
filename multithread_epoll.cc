@@ -2,7 +2,12 @@
 #include <memory>
 #include <unistd.h>
 #include <stdio.h>
+#ifdef __LINUX__
 #include <sys/epoll.h>
+#else 
+     #include <sys/event.h>
+     #include <sys/time.h>
+#endif 
 #include <vector>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -18,6 +23,16 @@
 #include <sys/wait.h>
 #include <string>
 #include <sched.h>
+
+#ifdef __LINUX__ 
+  typedef struct epoll_event poller_event_t;
+#else 
+  typedef struct kevent poller_event_t;
+#endif 
+
+#define kReadEvent 1
+#define kWriteEvent (1 << 1)
+#define kErrorEvent (1 << 2)
 
 class Thread {
 public:
@@ -41,12 +56,14 @@ public:
   }
 
   int SetAffinity() {
+  #ifdef __LINUX__
      cpu_set_t mask;
      CPU_ZERO(&mask);  
      CPU_SET(_no,&mask);
     if (sched_setaffinity(0, sizeof(mask), &mask) == -1) {
       printf("sched_setaffinitya failed.\n");
     }
+ #endif 
     return 0;
   }
 
@@ -61,8 +78,14 @@ protected:
 class Server2 : public Thread {
 public:
 
-  Server2(short port, int no):_epollfd(::epoll_create1(EPOLL_CLOEXEC)),
-                      _port(port), Thread(no) {
+  Server2(short port, int no):
+#ifdef __LINUX__
+    _epollfd(::epoll_create1(EPOLL_CLOEXEC)),
+#else  //macOS
+    _epollfd(::kqueue()),
+#endif 
+    _port(port), 
+    Thread(no) {
       assert(_epollfd != -1);
   }
 
@@ -72,7 +95,11 @@ public:
   }
 
   int create_fd_and_listen() {
+    #ifdef __LINUX__
     _fd = socket(AF_INET, SOCK_STREAM|SOCK_NONBLOCK|SOCK_CLOEXEC, 0);
+    #else 
+    _fd = socket(AF_INET, SOCK_STREAM, 0);
+    #endif 
     if (_fd < 0) {
       return -1;
     }
@@ -110,18 +137,72 @@ public:
   }
 
   inline int add_fd_epoll(int fd) {
+  #ifdef __LINUX__
     struct epoll_event event; 
     event.data.fd = fd;
     event.events = EPOLLIN | EPOLLERR | EPOLLHUP;
     return ::epoll_ctl(_epollfd, EPOLL_CTL_ADD, fd, &event);
+  #else //macOS
+    struct kevent ev;
+    EV_SET(&ev, fd, EVFILT_READ, EV_ADD, 0, 0, (void*)&fd);
+    return kevent(_epollfd, &ev, 1, NULL, 0, NULL);
+  #endif 
   }
 
 
   inline int del_fd_epoll(int fd) {
+  #ifdef __LINUX__
     struct epoll_event event; 
     event.data.fd = fd;
     event.events = EPOLLIN | EPOLLERR | EPOLLHUP;
     return ::epoll_ctl(_epollfd, EPOLL_CTL_DEL, fd, &event);
+  #else //macOS 
+    struct kevent ev;
+    EV_SET(&ev, fd, EVFILT_READ, EV_DELETE, 0, 0, (void*)&fd);
+    return kevent(_epollfd, &ev, 1, NULL, 0, NULL);
+  #endif 
+  }
+
+  int poller_wait(poller_event_t* events, int maxevents)
+  {
+    #ifdef __LINUX__ 
+      return ::epoll_wait(_epollfd, events, maxevents, -1);
+    #else  //macOS
+      return ::kevent(_epollfd, NULL, 0, events, maxevents, NULL);
+    #endif 
+  }
+  int poller_fd(poller_event_t* event)
+  {
+    #ifdef __LINUX__ 
+    return event->data.fd; 
+    #else //macOS
+    //return *(int*)event->udata;
+    return event->ident;
+    #endif
+  }
+  int poller_event(poller_event_t* event)
+  {
+    #ifdef __LINUX__ 
+      if (event->events & EPOLLIN) {
+        return kReadEvent;
+      }
+      else if (event->events & EPOLLOUT) {
+        return kWriteEvent;
+      }
+      else {
+        return kErrorEvent;
+      }
+    #else 
+      if (event->filter & EVFILT_READ) {
+        return kReadEvent;
+      }
+      else if (event->filter & EVFILT_WRITE) {
+        return kWriteEvent;
+      }
+      else {
+        return kErrorEvent;
+      }
+    #endif 
   }
 
   virtual void Serve() {
@@ -135,29 +216,31 @@ public:
     }
     add_fd_epoll(_fd);
 
-    struct epoll_event ready_event[128];
-    int num = 128;
+    const int maxevents = 128;
+    poller_event_t events[maxevents];
+
     while (_running) {
-      int r = ::epoll_wait(_epollfd, ready_event, num, -1);
-      if (r == 0) {
+      int nevent = poller_wait(events, maxevents);
+      if (nevent == 0) {
         printf("epoll_wait timeout\n");
         continue;                                                                                                                                                                                         
       }
-      else if (r < 0 && errno == EINTR) {
+      else if (nevent < 0 && errno == EINTR) {
         continue;
-      } else if (r < 0) {
+      } else if (nevent < 0) {
         printf("epoll_wait error: %d\n", errno);
         break;
       }
-      for (int i = 0; i < r; ++i) {
-        if (ready_event[i].data.fd == _fd) {
+      for (int i = 0; i < nevent; ++i) {
+        int fd = poller_fd(&events[i]);
+        if (fd == _fd) {
           struct sockaddr_in addr;
           socklen_t addr_len;
-#if 1
+          #ifdef __LINUX__ 
           int connfd = ::accept4(_fd, (struct sockaddr*)&addr, &addr_len, SOCK_NONBLOCK|SOCK_CLOEXEC);
-#else
+          #else 
           int connfd = ::accept(_fd, (struct sockaddr*)&addr, &addr_len);
-#endif
+          #endif 
           if (connfd < 0) {
             printf("accept error: %d\n", errno); 
             continue;
@@ -167,15 +250,15 @@ public:
             ::close(connfd);
           }
         } else {
-          int fd = ready_event[i].data.fd;
-          int event = ready_event[i].events;
-          if (event & EPOLLIN) {
+          int event = poller_event(&events[i]);
+          if (event & kReadEvent) {
             char buf[1024] = {0};
             int n = read(fd, buf, 1024);
             if (n) {
               printf("\033[35m%ld\033[0m:\n%s\n", _thread->get_id(), buf);
             }
           }
+          del_fd_epoll(fd);
           ::close(fd);
         }
       }
@@ -191,7 +274,7 @@ private:
 int main()
 {
   std::vector<std::unique_ptr<Server2>> services;
-  for (int i = 0; i < 1; ++i) {
+  for (int i = 0; i < 10; ++i) {
     services.emplace_back(new Server2(8282, i));
     services.back()->Start();
   }
