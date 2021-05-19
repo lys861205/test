@@ -1,4 +1,6 @@
+#ifdef __LINUX__
 #include <sys/eventfd.h>
+#endif //
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -13,6 +15,7 @@ int main(int argc, char** argv)
   uint64_t u;
   ssize_t s;
 
+#ifdef __LINUX__
   if (argc < 2) {
     fprintf(stderr, "Usage: %s <num> ...\n", argv[0]);
     exit(EXIT_FAILURE);
@@ -49,5 +52,6 @@ int main(int argc, char** argv)
     handle_error("fork");
   break;
   }
+#endif //
   return 0;
 }

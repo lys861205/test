@@ -1,4 +1,10 @@
+#ifdef __LINUX__
 #include <sys/sendfile.h>
+#else 
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/uio.h>
+#endif 
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -11,6 +17,7 @@
 #include <arpa/inet.h>       
 
 void test_sendfile(const char* outfile, int fd) {
+#ifdef __LINUX__
   int fd_out = open(outfile, O_RDONLY);
   //int fd_in  = open(infile, O_CREAT | O_RDWR);
   if (-1 == fd_out) {
@@ -21,6 +28,7 @@ void test_sendfile(const char* outfile, int fd) {
     perror("send file");
   }
   close(fd_out);
+#endif
 }
 
 int main()
