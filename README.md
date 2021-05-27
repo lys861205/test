@@ -16,6 +16,7 @@
     * SO_REUSEPORT
 * eventfd
 * open(O_DIRECT)
+* Any type
 
 
 
