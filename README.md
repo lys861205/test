@@ -17,6 +17,8 @@
 * eventfd
 * open(O_DIRECT)
 * Any type
+* brk
+* mmap
 
 
 
