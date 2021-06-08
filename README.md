@@ -21,6 +21,8 @@
 * mmap
 * lambda 表达式
 * readv
+* signalfd
+
 
 
 
